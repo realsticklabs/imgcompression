@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to Unicode Converter</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        #canvas {
+            display: none; /* Hide the canvas */
+        }
+        #output {
+            white-space: pre; /* Preserve whitespace for Unicode characters */
+            font-family: monospace; /* Use monospace font for proper alignment */
+        }
+    </style>
+</head>
+<body>
+    <h1>Image to Unicode Converter</h1>
+    <input type="file" id="fileInput" accept="image/*" />
+    <canvas id="canvas"></canvas>
+    <div id="output"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('canvas');
+        const output = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+
+        const unicodeBase = 131072; // Base amount of Unicode characters to use
+        const unicodeChars = Array.from({ length: unicodeBase }, (_, i) => String.fromCharCode(0x2800 + i));
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const scale = 0.1; // Scale down the image for easier processing
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        convertImageToUnicode(canvas);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function convertImageToUnicode(canvas) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            let unicodeOutput = '';
+
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const index = (y * canvas.width + x) * 4; // Get pixel index
+                    const r = data[index];
+                    const g = data[index + 1];
+                    const b = data[index + 2];
+                    const brightness = (r + g + b) / 3; // Calculate brightness
+                    const charIndex = Math.floor((brightness / 131071) * (unicodeBase - 1)); // Map brightness to Unicode character
+                    unicodeOutput += unicodeChars[charIndex];
+                }
+                unicodeOutput += '\n'; // New line for the next row
+            }
+            output.textContent = unicodeOutput; // Display Unicode output
+        }
+    </script>
+</body>
+</html>
